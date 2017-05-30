@@ -1,0 +1,104 @@
+version: '3'
+services:
+  ###############################
+  # Built from local Dockerfile #
+  ###############################
+  web:
+    # Build the Dockerfile in this directory.
+    build: .
+    # Mount this directory as a volume at /app
+    volumes:
+      - '.:/app'
+    # Make all commands relative to our application directory
+    working_dir: /app
+    # The process that runs in the container.
+    # Remeber, a container runs only ONE process.
+    command: 'node server.js'
+    # Set some environment variables to be used in the application
+    environment:
+      PORT: 8080
+      # Notice the hostname postgres.
+      # This is made available via container links.
+      DATABASE_URL: 'postgres://postgres:@postgres:5432/postgres'
+      REDIS_URL: 'redis://redis:6379'
+      RABBIT_URL: 'amqp://rabbitmq'
+    # Make the port available on the host machine
+    # so that we can navigate there with our web browser.
+    ports:
+      - '8080:8080'
+    # Link this container to other containers to create
+    # a network interface.
+    links:
+      - postgres
+      - redis
+      - rabbitmq
+
+  clock:
+    build: .
+    volumes:
+      - '.:/app'
+    working_dir: /app
+    command: 'node clock.js'
+    environment:
+      DATABASE_URL: 'postgres://postgres:@postgres:5432/postgres'
+      REDIS_URL: 'redis://redis:6379'
+      RABBIT_URL: 'amqp://rabbitmq'
+    links:
+      - postgres
+      - redis
+      - rabbitmq
+
+  worker:
+    build: .
+    volumes:
+      - '.:/app'
+    working_dir: /app
+    command: 'node worker.js'
+    environment:
+      DATABASE_URL: 'postgres://postgres:@postgres:5432/postgres'
+      REDIS_URL: 'redis://redis:6379'
+      RABBIT_URL: 'amqp://rabbitmq'
+    links:
+      - postgres
+      - redis
+      - rabbitmq
+
+  shell:
+    build: .
+    volumes:
+      - '.:/app'
+    working_dir: /app
+    command: bash
+    environment:
+      DATABASE_URL: 'postgres://postgres:@postgres:5432/postgres'
+      REDIS_URL: 'redis://redis:6379'
+    ports:
+      - '8080:8080'
+    links:
+      - postgres
+      - redis
+      - rabbitmq
+
+  ############################
+  # Built from remote images #
+  ############################
+  postgres:
+    # Image name
+    image: postgres
+    # Expose the port on your local machine.
+    # This is not needed to link containers.
+    # BUT, it is handy for connecting to your
+    # database with something like DataGrip from
+    # you local host machine.
+    ports:
+      - '5432:5432'
+
+  rabbitmq:
+    image: rabbitmq
+    ports:
+      - '5672:5672'
+
+  redis:
+    image: redis
+    ports:
+      - '6379:6379'
